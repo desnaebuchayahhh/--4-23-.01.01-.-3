@@ -14,7 +14,6 @@ export const PostavshikAvtorizacii = ({ children }) => {
     try {
       const token = localStorage.getItem('token')
       if (token) {
-        
         ustanovitPolzovatelya({ 
           id: 1, 
           imya: 'Test User', 
@@ -31,7 +30,6 @@ export const PostavshikAvtorizacii = ({ children }) => {
 
   const voshod = async (email, parol) => {
     try {
-      
       if (email === 'admin@example.com' && parol === 'admin') {
         const dannye = {
           token: 'fake-token',
@@ -52,7 +50,8 @@ export const PostavshikAvtorizacii = ({ children }) => {
             id: 2, 
             imya: 'User', 
             email: 'user@example.com',
-            rol: 'user'
+            rol: 'user',
+            skidka: 20 // ← ДОБАВЬТЕ ЗНАЧЕНИЕ СКИДКИ ЗДЕСЬ
           }
         }
         localStorage.setItem('token', dannye.token)

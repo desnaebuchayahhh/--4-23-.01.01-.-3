@@ -242,7 +242,7 @@ const FormaAvtorizacii = ({ naZakritie }) => {
           color: 'var(--seriy-temnyi)',
           textAlign: 'center'
         }}>
-          <p style={{ marginBottom: '0.5rem', fontWeight: 700, color: 'var(--cherniy)' }}>ТЕСТОВЫЕ АККАУНТЫ:</p>
+          <p style={{ marginBottom: '0.5rem', fontWeight: 700, color: 'var(--cherniy)' }}>ДОСТУПНЫЕ АККАУНТЫ:</p>
           <p style={{ margin: '0.25rem 0' }}><strong>Админ:</strong> admin@example.com / admin</p>
           <p style={{ margin: '0.25rem 0' }}><strong>Пользователь:</strong> user@example.com / user</p>
         </div>

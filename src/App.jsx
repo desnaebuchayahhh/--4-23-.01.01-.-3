@@ -5,10 +5,11 @@ import { PostavshikAvtorizacii } from './kontekst/KontekstAvtorizacii.jsx'
 import { ispolzovanieKorziny } from './kontekst/KontekstKorziny.jsx'
 import { ispolzovanieTemy } from './kontekst/KontekstTemy.jsx'
 import { ispolzovanieAvtorizacii } from './kontekst/KontekstAvtorizacii.jsx'
-import FormaAvtorizacii from "./avtorizaciya/Forma-avtorizacii.jsx"
+import FormaAvtorizacii from './avtorizaciya/Forma-avtorizacii.jsx'
+import { logDeystvie, logAdminDeystvie, logKorzinaDeystvie } from './huki/ispolzovanie-api.js'
 import './App.css'
 
-const mockTovari = [
+const nachalnieTovari = [
   {
     id: 1,
     name: 'МЫ ДЕТИ',
@@ -61,8 +62,190 @@ const mockTovari = [
 
 const kategorii = ['ВСЕ ТОВАРЫ', 'ФУТБОЛКИ', 'ЦЕПИ', 'БРЮКИ', 'МАЙКИ', 'ВЕРХНЯЯ ОДЕЖДА', 'АКСЕССУАРЫ']
 
+const FormaRedaktirovaniyaTovara = ({ tovar, naSokhranenie, naOtmenu }) => {
+  const [nazvanie, ustanovitNazvanie] = useState(tovar.name)
+  const [opisanie, ustanovitOpisanie] = useState(tovar.description)
+  const [cena, ustanovitCenu] = useState(tovar.price)
+
+  const obrabotatSokhranenie = (e) => {
+    e.preventDefault()
+    naSokhranenie({
+      ...tovar,
+      name: nazvanie,
+      description: opisanie,
+      price: parseInt(cena)
+    })
+  }
+
+  return (
+    <div className="overlay">
+      <div className="forma-avtorizacii" style={{
+        background: 'var(--beliy)',
+        border: '2px solid var(--cherniy)',
+        padding: '2rem',
+        width: '100%',
+        maxWidth: '500px',
+        position: 'relative'
+      }}>
+        <div className="zagolovok-formi" style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '2rem',
+          borderBottom: '2px solid var(--cherniy)',
+          paddingBottom: '1rem'
+        }}>
+          <h2 style={{
+            fontSize: '1.5rem',
+            fontWeight: 900,
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            color: 'var(--cherniy)',
+            margin: 0
+          }}>
+            РЕДАКТИРОВАТЬ ТОВАР
+          </h2>
+          <button 
+            className="knopka-zakritiya" 
+            onClick={naOtmenu}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '2rem',
+              cursor: 'pointer',
+              color: 'var(--cherniy)',
+              lineHeight: 1
+            }}
+          >×</button>
+        </div>
+        
+        <form onSubmit={obrabotatSokhranenie}>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{
+              display: 'block',
+              marginBottom: '0.5rem',
+              fontWeight: 700,
+              color: 'var(--cherniy)',
+              textTransform: 'uppercase'
+            }}>НАЗВАНИЕ</label>
+            <input
+              type="text"
+              value={nazvanie}
+              onChange={(e) => ustanovitNazvanie(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '2px solid var(--cherniy)',
+                background: 'var(--beliy)',
+                color: 'var(--cherniy)',
+                fontSize: '1rem'
+              }}
+            />
+          </div>
+          
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{
+              display: 'block',
+              marginBottom: '0.5rem',
+              fontWeight: 700,
+              color: 'var(--cherniy)',
+              textTransform: 'uppercase'
+            }}>ОПИСАНИЕ</label>
+            <textarea
+              value={opisanie}
+              onChange={(e) => ustanovitOpisanie(e.target.value)}
+              rows="3"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '2px solid var(--cherniy)',
+                background: 'var(--beliy)',
+                color: 'var(--cherniy)',
+                fontSize: '1rem',
+                resize: 'vertical'
+              }}
+            />
+          </div>
+          
+          <div style={{ marginBottom: '2rem' }}>
+            <label style={{
+              display: 'block',
+              marginBottom: '0.5rem',
+              fontWeight: 700,
+              color: 'var(--cherniy)',
+              textTransform: 'uppercase'
+            }}>ЦЕНА (₽)</label>
+            <input
+              type="number"
+              value={cena}
+              onChange={(e) => ustanovitCenu(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '2px solid var(--cherniy)',
+                background: 'var(--beliy)',
+                color: 'var(--cherniy)',
+                fontSize: '1rem'
+              }}
+            />
+          </div>
+          
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button 
+              type="button" 
+              className="knopka"
+              onClick={naOtmenu}
+              style={{ flex: 1 }}
+            >
+              ОТМЕНА
+            </button>
+            <button 
+              type="submit" 
+              className="knopka knopka--primary"
+              style={{ flex: 1 }}
+            >
+              СОХРАНИТЬ
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 const KorzinaStranica = () => {
   const { items, removeItem, updateQuantity, clearCart, getTotalPrice } = ispolzovanieKorziny()
+  const { polzovatel } = ispolzovanieAvtorizacii()
+
+  const rasschitatCenuSoSkidkoi = (cena) => {
+    if (polzovatel && polzovatel.skidka) {
+      return Math.round(cena * (1 - polzovatel.skidka / 100))
+    }
+    return cena
+  }
+
+  const obshayaStoimost = getTotalPrice()
+  const stoimostSoSkidkoi = polzovatel && polzovatel.skidka 
+    ? Math.round(obshayaStoimost * (1 - polzovatel.skidka / 100))
+    : obshayaStoimost
+
+  const obrabotatUdalenie = (item) => {
+    removeItem(item.id)
+    logKorzinaDeystvie('УДАЛЕН ИЗ КОРЗИНЫ', polzovatel, item)
+  }
+
+  const obrabotatIzmenenieKolichestva = (itemId, novoeKolichestvo) => {
+    updateQuantity(itemId, novoeKolichestvo)
+    const item = items.find(i => i.id === itemId)
+    if (item) {
+      logKorzinaDeystvie('ИЗМЕНЕНО КОЛИЧЕСТВО', polzovatel, item, novoeKolichestvo)
+    }
+  }
+
+  const obrabotatOchistkuKorziny = () => {
+    clearCart()
+    logDeystvie('ОЧИЩЕНА КОРЗИНА', polzovatel)
+  }
 
   if (items.length === 0) {
     return (
@@ -89,6 +272,20 @@ const KorzinaStranica = () => {
         КОРЗИНА ({items.reduce((sum, item) => sum + item.quantity, 0)} товаров)
       </h1>
       
+      {polzovatel && polzovatel.skidka && (
+        <div style={{
+          background: 'var(--cherniy)',
+          color: 'var(--beliy)',
+          padding: '1rem',
+          marginBottom: '2rem',
+          textAlign: 'center',
+          fontWeight: 700,
+          textTransform: 'uppercase'
+        }}>
+          🎉 ВАША СКИДКА {polzovatel.skidka}% АКТИВИРОВАНА!
+        </div>
+      )}
+      
       <div className="spisok-tovarov">
         {items.map(item => (
           <div key={item.id} className="element-korziny">
@@ -108,21 +305,32 @@ const KorzinaStranica = () => {
               <h3 className="nazvanie-elementa">{item.name}</h3>
               <p className="opisanie-elementa">{item.description}</p>
               <div className="cena-elementa">
-                <span className="tekushaya-cena">{item.price} ₽</span>
+                {polzovatel && polzovatel.skidka ? (
+                  <>
+                    <span style={{textDecoration: 'line-through', color: 'var(--seriy-temnyi)'}}>
+                      {item.originalPrice || item.price} ₽
+                    </span>
+                    <span className="tekushaya-cena" style={{color: '#e74c3c', marginLeft: '1rem'}}>
+                      {rasschitatCenuSoSkidkoi(item.originalPrice || item.price)} ₽
+                    </span>
+                  </>
+                ) : (
+                  <span className="tekushaya-cena">{item.price} ₽</span>
+                )}
               </div>
             </div>
 
             <div className="upravlenie-kolichestvom">
               <button 
                 className="knopka-kolichestva"
-                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                onClick={() => obrabotatIzmenenieKolichestva(item.id, item.quantity - 1)}
               >
                 -
               </button>
               <span className="znachenie-kolichestva">{item.quantity}</span>
               <button 
                 className="knopka-kolichestva"
-                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                onClick={() => obrabotatIzmenenieKolichestva(item.id, item.quantity + 1)}
               >
                 +
               </button>
@@ -131,7 +339,7 @@ const KorzinaStranica = () => {
             <div className="deystviya-elementa">
               <button 
                 className="knopka-udaleniya"
-                onClick={() => removeItem(item.id)}
+                onClick={() => obrabotatUdalenie(item)}
               >
                 УДАЛИТЬ
               </button>
@@ -141,16 +349,24 @@ const KorzinaStranica = () => {
       </div>
 
       <div className="itogo-korzina">
-        <div className="stroka-itogo">
-          <span>Промежуточная сумма:</span>
-          <span>{getTotalPrice()} ₽</span>
-        </div>
+        {polzovatel && polzovatel.skidka && (
+          <>
+            <div className="stroka-itogo">
+              <span>Сумма без скидки:</span>
+              <span>{obshayaStoimost} ₽</span>
+            </div>
+            <div className="stroka-itogo">
+              <span>Скидка {polzovatel.skidka}%:</span>
+              <span style={{color: '#27ae60'}}>-{obshayaStoimost - stoimostSoSkidkoi} ₽</span>
+            </div>
+          </>
+        )}
         <div className="stroka-itogo obshaya-stoimost">
           <span>Общая стоимость:</span>
-          <span>{getTotalPrice()} ₽</span>
+          <span>{stoimostSoSkidkoi} ₽</span>
         </div>
         <div style={{display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '2rem'}}>
-          <button className="knopka knopka--secondary" onClick={clearCart}>
+          <button className="knopka knopka--secondary" onClick={obrabotatOchistkuKorziny}>
             ОЧИСТИТЬ КОРЗИНУ
           </button>
           <button className="knopka knopka--primary">
@@ -171,6 +387,11 @@ const Zagolovok = ({ currentPage, onNavigate }) => {
   useEffect(() => {
     localStorage.setItem('currentPage', currentPage)
   }, [currentPage])
+
+  const obrabotatVihod = () => {
+    logDeystvie('ВЫШЕЛ ИЗ СИСТЕМЫ', polzovatel)
+    vihod()
+  }
 
   return (
     <header className="zagolovok">
@@ -204,7 +425,6 @@ const Zagolovok = ({ currentPage, onNavigate }) => {
             )}
           </button>
           
-          {/* Кнопка переключения темы */}
           <button 
             className="knopka-temy"
             onClick={pereklyuchitTemu}
@@ -212,10 +432,12 @@ const Zagolovok = ({ currentPage, onNavigate }) => {
             {temnayaTema ? 'СВЕТЛАЯ' : 'ТЕМНАЯ'}
           </button>
 
-          {/* Кнопка авторизации */}
           {polzovatel ? (
             <div className="profil-polzovatelya">
-              <span className="imya-polzovatelya">Привет, {polzovatel.imya}</span>
+              <span className="imya-polzovatelya">
+                Привет, {polzovatel.imya}
+                {polzovatel.skidka && ` (${polzovatel.skidka}% скидка)`}
+              </span>
               {polzovatel.rol === 'admin' && (
                 <button 
                   className="knopka-navigacii"
@@ -226,7 +448,7 @@ const Zagolovok = ({ currentPage, onNavigate }) => {
               )}
               <button 
                 className="knopka-navigacii"
-                onClick={vihod}
+                onClick={obrabotatVihod}
               >
                 ВЫХОД
               </button>
@@ -242,7 +464,6 @@ const Zagolovok = ({ currentPage, onNavigate }) => {
         </nav>
       </div>
 
-      {/* Модальное окно авторизации */}
       {pokazatFormu && (
         <FormaAvtorizacii naZakritie={() => ustanovitPokazatFormu(false)} />
       )}
@@ -250,10 +471,96 @@ const Zagolovok = ({ currentPage, onNavigate }) => {
   )
 }
 
+const KartochkaTovara = ({ tovar, naRedaktirovanie, polzovatel }) => {
+  const { addItem } = ispolzovanieKorziny()
+
+  const rasschitatCenuSoSkidkoi = (cena) => {
+    if (polzovatel && polzovatel.skidka) {
+      return Math.round(cena * (1 - polzovatel.skidka / 100))
+    }
+    return cena
+  }
+
+  const obrabotatDobavlenieVKorzinu = () => {
+    const tovarSKorrekcieiCeni = {
+      ...tovar,
+      originalPrice: tovar.price,
+      price: rasschitatCenuSoSkidkoi(tovar.price)
+    }
+    addItem(tovarSKorrekcieiCeni)
+    alert('Товар добавлен в корзину!')
+    logKorzinaDeystvie('ДОБАВЛЕН В КОРЗИНУ', polzovatel, tovar)
+  }
+
+  return (
+    <div className="kartochka-tovara">
+      <div className="izobrazhenie-tovara">
+        <img 
+          src={tovar.image} 
+          alt={tovar.name}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover'
+          }}
+        />
+        {polzovatel && polzovatel.rol === 'admin' && (
+          <button 
+            onClick={() => naRedaktirovanie(tovar)}
+            style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              background: 'var(--beliy)',
+              color: 'var(--cherniy)',
+              border: '2px solid var(--cherniy)',
+              padding: '0.5rem',
+              cursor: 'pointer',
+              fontWeight: 700,
+              fontSize: '0.8rem'
+            }}
+          >
+            ✎
+          </button>
+        )}
+      </div>
+      <div className="informaciya-tovara">
+        <h3 className="nazvanie-tovara">{tovar.name}</h3>
+        <p className="opisanie-tovara">{tovar.description}</p>
+        <div className="cena-tovara">
+          {polzovatel && polzovatel.skidka ? (
+            <>
+              <span style={{textDecoration: 'line-through', color: 'var(--seriy-temnyi)'}}>
+                {tovar.price} ₽
+              </span>
+              <span className="tekushaya-cena" style={{color: '#e74c3c', marginLeft: '1rem'}}>
+                {rasschitatCenuSoSkidkoi(tovar.price)} ₽
+              </span>
+              <span className="znachok-skidki" style={{background: '#27ae60'}}>
+                -{polzovatel.skidka}%
+              </span>
+            </>
+          ) : (
+            <span className="tekushaya-cena">{tovar.price} ₽</span>
+          )}
+        </div>
+        <button 
+          className="knopka-dobavleniya-v-korzinu"
+          onClick={obrabotatDobavlenieVKorzinu}
+        >
+          ДОБАВИТЬ В КОРЗИНУ
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function App() {
   const [currentPage, setCurrentPage] = useState('glavnaya')
   const [vibrannayaKategoriya, setVibrannayaKategoriya] = useState('ВСЕ ТОВАРЫ')
-  const { addItem } = ispolzovanieKorziny()
+  const [tovari, ustanovitTovari] = useState(nachalnieTovari)
+  const [redaktiruemyiTovar, ustanovitRedaktiruemyiTovar] = useState(null)
+  const { polzovatel } = ispolzovanieAvtorizacii()
   const { temnayaTema } = ispolzovanieTemy()
 
   useEffect(() => {
@@ -267,9 +574,18 @@ function App() {
     localStorage.setItem('selectedCategory', vibrannayaKategoriya)
   }, [vibrannayaKategoriya])
 
+  const sokhranitIzmeneniyaTovara = (obnovlennyiTovar) => {
+    const obnovlennieTovari = tovari.map(tovar => 
+      tovar.id === obnovlennyiTovar.id ? obnovlennyiTovar : tovar
+    )
+    ustanovitTovari(obnovlennieTovari)
+    ustanovitRedaktiruemyiTovar(null)
+    logAdminDeystvie('ОТРЕДАКТИРОВАН ТОВАР', obnovlennyiTovar)
+  }
+
   const otfiltrovannieTovari = vibrannayaKategoriya === 'ВСЕ ТОВАРЫ' 
-    ? mockTovari 
-    : mockTovari.filter(tovar => tovar.category === vibrannayaKategoriya)
+    ? tovari 
+    : tovari.filter(tovar => tovar.category === vibrannayaKategoriya)
 
   const renderPage = () => {
     switch (currentPage) {
@@ -281,38 +597,16 @@ function App() {
             </h1>
             <p style={{fontSize: '1.2rem', marginBottom: '2rem', color: 'var(--seriy-temnyi)'}}>
               Найдено товаров: {otfiltrovannieTovari.length}
+              {polzovatel && polzovatel.skidka && ` (Ваша скидка ${polzovatel.skidka}% активна)`}
             </p>
             <div className="setka-tovarov">
               {otfiltrovannieTovari.map(tovar => (
-                <div key={tovar.id} className="kartochka-tovara">
-                  <div className="izobrazhenie-tovara">
-                    <img 
-                      src={tovar.image} 
-                      alt={tovar.name}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover'
-                      }}
-                    />
-                  </div>
-                  <div className="informaciya-tovara">
-                    <h3 className="nazvanie-tovara">{tovar.name}</h3>
-                    <p className="opisanie-tovara">{tovar.description}</p>
-                    <div className="cena-tovara">
-                      <span className="tekushaya-cena">{tovar.price} ₽</span>
-                    </div>
-                    <button 
-                      className="knopka-dobavleniya-v-korzinu"
-                      onClick={() => {
-                        addItem(tovar)
-                        alert('Товар добавлен в корзину!')
-                      }}
-                    >
-                      ДОБАВИТЬ В КОРЗИНУ
-                    </button>
-                  </div>
-                </div>
+                <KartochkaTovara 
+                  key={tovar.id} 
+                  tovar={tovar}
+                  polzovatel={polzovatel}
+                  naRedaktirovanie={ustanovitRedaktiruemyiTovar}
+                />
               ))}
             </div>
           </div>
@@ -323,9 +617,17 @@ function App() {
         return (
           <div>
             <h1 style={{fontSize: '3rem', fontWeight: 900, marginBottom: '2rem', textTransform: 'uppercase'}}>
-              АДМИНИСТРИРОВАНИЕ
+              ПАНЕЛЬ АДМИНИСТРАТОРА
             </h1>
-            <p style={{fontSize: '1.2rem'}}>Панель управления магазином</p>
+            <div style={{
+              border: '2px solid var(--cherniy)',
+              padding: '2rem',
+              background: 'var(--beliy)',
+              marginBottom: '2rem'
+            }}>
+              <h2 style={{marginBottom: '1rem'}}>Управление товарами</h2>
+              <p>Для редактирования товара нажмите на значок ✎ в карточке товара в каталоге.</p>
+            </div>
           </div>
         )
       default: 
@@ -336,6 +638,7 @@ function App() {
                 <h1 className="zagolovok-geroya">ДОБРО ПОЖАЛОВАТЬ В ДЕСНАШОП!</h1>
                 <p className="podzagolovok-geroya">
                   Откройте для себя одежду...
+                  {polzovatel && polzovatel.skidka && ` Ваша скидка ${polzovatel.skidka}% активна!`}
                 </p>
                 <button 
                   className="knopka knopka--primary"
@@ -351,36 +654,13 @@ function App() {
                 ИЗБРАННЫЕ ТОВАРЫ
               </h2>
               <div className="setka-tovarov">
-                {mockTovari.slice(0, 4).map(tovar => (
-                  <div key={tovar.id} className="kartochka-tovara">
-                    <div className="izobrazhenie-tovara">
-                      <img 
-                        src={tovar.image} 
-                        alt={tovar.name}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover'
-                        }}
-                      />
-                    </div>
-                    <div className="informaciya-tovara">
-                      <h3 className="nazvanie-tovara">{tovar.name}</h3>
-                      <p className="opisanie-tovara">{tovar.description}</p>
-                      <div className="cena-tovara">
-                        <span className="tekushaya-cena">{tovar.price} ₽</span>
-                      </div>
-                      <button 
-                        className="knopka-dobavleniya-v-korzinu"
-                        onClick={() => {
-                          addItem(tovar)
-                          alert('Товар добавлен в корзину!')
-                        }}
-                      >
-                        ДОБАВИТЬ В КОРЗИНУ
-                      </button>
-                    </div>
-                  </div>
+                {tovari.slice(0, 4).map(tovar => (
+                  <KartochkaTovara 
+                    key={tovar.id} 
+                    tovar={tovar}
+                    polzovatel={polzovatel}
+                    naRedaktirovanie={ustanovitRedaktiruemyiTovar}
+                  />
                 ))}
               </div>
             </section>
@@ -417,6 +697,14 @@ function App() {
           {renderPage()}
         </main>
       </div>
+
+      {redaktiruemyiTovar && (
+        <FormaRedaktirovaniyaTovara 
+          tovar={redaktiruemyiTovar}
+          naSokhranenie={sokhranitIzmeneniyaTovara}
+          naOtmenu={() => ustanovitRedaktiruemyiTovar(null)}
+        />
+      )}
 
       <footer className="podval">
         <div className="soderzhanie-podvala">
